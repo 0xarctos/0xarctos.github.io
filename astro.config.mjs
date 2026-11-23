@@ -49,6 +49,17 @@ export default defineConfig({
 			lastUpdated: true,
 			sidebar,
 			routeMiddleware: './src/routeData.ts',
+			// GoatCounter analytics (ignores localhost, so dev visits are not counted)
+			head: [
+				{
+					tag: 'script',
+					attrs: {
+						src: 'https://gc.zgo.at/count.js',
+						'data-goatcounter': 'https://0xarctos.goatcounter.com/count',
+						async: true,
+					},
+				},
+			],
 		}),
 	],
 });
