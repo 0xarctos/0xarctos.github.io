@@ -1,0 +1,1 @@
+wctf{writeup_local_flag}

@@ -1,0 +1,24 @@
+/* Round avatar in the header and on the home page */
+.site-title img,
+.hero img {
+	border-radius: 50%;
+}
+/* Home page cards: one color per position */
+.card:nth-child(1) { /* Binary Exploitation */
+	--sl-card-border: var(--sl-color-red);
+	--sl-card-bg: var(--sl-color-red-low);
+}
+.card:nth-child(2) { /* Reverse Engineering */
+	--sl-card-border: var(--sl-color-blue);
+	--sl-card-bg: var(--sl-color-blue-low);
+}
+.card:nth-child(3) { /* Tools */
+	--sl-card-border: var(--sl-color-green);
+	--sl-card-bg: var(--sl-color-green-low);
+}
+/* Card grids: 3 cards per row on wide screens (Starlight default is 2) */
+@media (min-width: 50rem) {
+	.card-grid {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}

@@ -1,0 +1,122 @@
+---
+title: "Blue Market"
+sidebar:
+  badge:
+    text: pwn
+    variant: danger
+---
+
+import { LinkButton } from '@astrojs/starlight/components';
+import Snippet from '@components/Snippet.astro';
+import blue_market from './blue_market.py?raw';
+import { Image } from 'astro:assets';
+
+| CTF | Category | Difficulty | Points |
+| --- | -------- | ---------- | ------ |
+| WolvCTF 2026 | pwn | Easy | 100 |
+
+### Reproduce locally
+
+Download challenge files and put them in the same folder:
+
+<LinkButton href="/files/WolvCTF_2026/blue_market" download="blue_market" icon="download" variant="minimal">
+	blue_market
+</LinkButton>
+<LinkButton href="/files/WolvCTF_2026/flag.txt" download="flag.txt" icon="download" variant="minimal">
+	flag.txt
+</LinkButton>
+
+`flag.txt` mimics the real server flag.
+
+### [Reading checksec](/kb/reading_checksec/)
+
+* Partial RELRO
+* No canary
+* No PIE (base address 0x400000)
+
+This enables ROP and GOT overwrite without requiring any leak.
+
+### [Strings](/kb/strings/)
+
+There is a clear reference to the flag: 
+```
+00402039	flag.txt missing	"flag.txt missing"	ds
+```
+
+``0x402039`` leads to the ``managerOverride`` method
+
+``managerOverride``:
+* opens, reads and displays the flag.
+* expects an argument and compares it with the magic ``0xc0ffee`` in order to give the flag.
+* is not called anywhere.
+
+### Hypothesis
+
+The challenge asks us to build a ROP chain in order to jump into ``managerOverride`` providing the correct argument.
+
+### [Vulnerabilities](/pwn/common_vulnerabilities/)
+
+``checkout`` method has a local buffer of ``64`` bytes then performs a ``read`` call in it with a max length of ``256`` (0x100) bytes.
+
+### [The Stack](/pwn/the_stack/)
+
+The vulnerable buffer starts at ``$rbp - 64`` (0x40), meaning that saved rbp then return address are right after the buffer on the stack. 
+This means that can overflow the buffer to overwrite the saved rbp and the return address then we can input ``176`` more bytes for our ROP chain.
+
+So, our ROP-chain max length is about 23 words starting on the return address.
+
+### [Gadgets](/pwn/rop_gadgets/)
+
+To perform our ROP attack we need as gadgets:
+* ``pop rdi; ret;``: inject the expected magic number as first argument for ``managerOverride``.
+* ``ret;``: maintain 16-byte stack alignment.
+
+The binary itself has the perfect gadgets:
+
+```bash
+$ ROPgadget --binary blue_market | grep "pop rdi"
+0x0000000000401182 : pop rdi ; ret
+
+$ ROPgadget --binary blue_market | grep "ret"
+0x0000000000401016 : ret
+```
+
+### Exploitation
+
+Declare the constants we have gathered during static analysis.
+As PIE is disabled, they will remain correct from an execution to another.
+
+<Snippet code={blue_market} region="constants" title="blue_market.py"/>
+
+Build the ROP chain:
+1. Padding up to the return address.
+2. ``pop rdi; ret;`` gadget loading next value in ``rdi``.
+3. magic number, that will be poped-out.
+4. ``ret;`` gadget to 16-bytes stack alignment as we popped once.
+5. ``manager_override`` address.
+
+<Snippet code={blue_market} region="payload" title="blue_market.py"/>
+
+Send the payload when asked:
+
+<Snippet code={blue_market} region="process" title="blue_market.py"/>
+
+Wait for the flag:
+
+### Flag
+
+<Snippet code={blue_market} region="flag" title="blue_market.py"/>
+
+```bash
+$ python3 blue_market.py
+[+] Starting local process './blue_market': pid 127705
+[+] Receiving all data: Done (92B)
+[*] Process './blue_market' stopped with exit code 0 (pid 127705)
+Found flag: wctf{writeup_local_flag}
+```
+
+### Full script
+
+<Snippet code={blue_market} title="blue_market.py" />
+
+**Thank you for reading !**
