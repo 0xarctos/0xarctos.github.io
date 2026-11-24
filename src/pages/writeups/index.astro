@@ -1,9 +1,8 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
-import { Badge } from '@astrojs/starlight/components';
 import { getCollection } from 'astro:content';
-import Difficulty from '../../components/Difficulty.astro';
-import { DIFFICULTY_LABELS, categoryVariant, ogImageMeta, AVATAR_OG_IMAGE } from '../../lib/writeups';
+import WriteupTable from '../../components/WriteupTable.astro';
+import { DIFFICULTY_LABELS, ogImageMeta, AVATAR_OG_IMAGE } from '../../lib/writeups';
 
 const writeups = (await getCollection('writeups')).sort(
 	(a, b) => a.data.ctf.localeCompare(b.data.ctf) || a.data.title.localeCompare(b.data.title),
@@ -18,64 +17,53 @@ const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 <StarlightPage frontmatter={{ title: 'Write-ups', tableOfContents: false, head: ogImageMeta(AVATAR_OG_IMAGE) }}>
 	<p>CTF write-ups: each one is the solve script, commented. Filter by technique and minimum difficulty.</p>
 
-	<form id="filters" class="filters">
-		<fieldset>
-			<legend>Tags <small>(write-ups matching all selected tags)</small></legend>
-			<div class="tags">
-				{
-					tags.map(([tag, n]) => (
-						<label class="tag">
-							<input type="checkbox" name="tags" value={tag} />
-							{tag} <small>{n}</small>
-						</label>
-					))
-				}
+	<form id="filters" class="filters not-content">
+		<details id="filters-panel" open>
+			<summary>
+				<span>Filters</span>
+				<span id="active" class="active" hidden></span>
+				<span id="count" class="count" aria-live="polite"></span>
+			</summary>
+
+			<div class="panel">
+				<fieldset>
+					<legend>Tags <small>(match all selected)</small></legend>
+					<div class="tags">
+						{
+							tags.map(([tag, n]) => (
+								<label class="tag">
+									<input type="checkbox" name="tags" value={tag} />
+									{tag} <small>{n}</small>
+								</label>
+							))
+						}
+					</div>
+				</fieldset>
+
+				<div class="controls">
+					<label class="min">
+						<span>Min difficulty</span>
+						<select name="min">
+							{[1, 2, 3, 4, 5].map((d) => <option value={d}>{d} - {DIFFICULTY_LABELS[d]}</option>)}
+						</select>
+					</label>
+					<button type="reset">Clear</button>
+				</div>
 			</div>
-		</fieldset>
-		<div class="row">
-			<label>
-				Min difficulty
-				<select name="min">
-					{[1, 2, 3, 4, 5].map((d) => <option value={d}>{d} - {DIFFICULTY_LABELS[d]}</option>)}
-				</select>
-			</label>
-			<button type="reset">Clear</button>
-			<span id="count" aria-live="polite"></span>
-		</div>
+		</details>
 	</form>
 
-	<table class="results">
-		<thead>
-			<tr><th class="cat-col" /><th>Challenge</th><th>CTF</th><th>Difficulty</th><th>Tags</th></tr>
-		</thead>
-		<tbody>
-			{
-				writeups.map(({ id, data }) => (
-					<tr data-tags={data.tags.join(' ')} data-difficulty={data.difficulty}>
-						<td class="cat-col"><Badge text={data.category} variant={categoryVariant(data.category)} /></td>
-							<td><a href={`/writeups/${id}/`}>{data.title}</a></td>
-						<td><a href={`/writeups/${id.split('/')[0]}/`}>{data.ctf}</a></td>
-						<td><Difficulty value={data.difficulty} /></td>
-						<td>
-							<div class="row-tags">
-								{data.tags.map((t) => (
-									<button type="button" class="tag-btn" data-tag={t}>{t}</button>
-								))}
-							</div>
-						</td>
-					</tr>
-				))
-			}
-		</tbody>
-	</table>
-	<p id="empty" hidden>No write-up matches these filters.</p>
+	<WriteupTable entries={writeups} showCtf tagMode="filter" />
+	<p id="empty" class="empty not-content" hidden>No write-up matches these filters.</p>
 </StarlightPage>
 
 <script>
 	const form = document.getElementById('filters') as HTMLFormElement;
-	const rows = [...document.querySelectorAll<HTMLTableRowElement>('.results tbody tr')];
+	const panel = document.getElementById('filters-panel') as HTMLDetailsElement;
+	const rows = [...document.querySelectorAll<HTMLTableRowElement>('.wt tbody tr')];
 	const boxes = [...form.querySelectorAll<HTMLInputElement>('input[name="tags"]')];
 	const min = form.querySelector<HTMLSelectElement>('select[name="min"]')!;
+	const active = document.getElementById('active')!;
 
 	function apply() {
 		const selected = boxes.filter((b) => b.checked).map((b) => b.value);
@@ -89,6 +77,11 @@ const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 		}
 		document.getElementById('count')!.textContent = `${shown} / ${rows.length}`;
 		document.getElementById('empty')!.hidden = shown > 0;
+
+		// Number of active filters, shown in the summary when the panel is collapsed.
+		const n = selected.length + (minDiff > 1 ? 1 : 0);
+		active.hidden = n === 0;
+		active.textContent = `${n} active`;
 
 		// Keep filters in the URL so a filtered view can be shared or bookmarked.
 		const params = new URLSearchParams();
@@ -106,61 +99,111 @@ const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 
 	form.addEventListener('change', apply);
 	form.addEventListener('reset', () => setTimeout(apply));
-	// Clicking a tag in the table adds it to the filter.
-	document.querySelector('.results')!.addEventListener('click', (e) => {
+	// Clicking a tag in the list adds it to the filter.
+	document.querySelector('.wt')!.addEventListener('click', (e) => {
 		const tag = (e.target as HTMLElement).closest<HTMLElement>('.tag-btn')?.dataset.tag;
 		const box = boxes.find((b) => b.value === tag);
 		if (box) {
 			box.checked = true;
 			apply();
+			// On mobile the panel may be collapsed: scroll up so the change is visible.
+			if (!panel.open) panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 		}
 	});
 	apply();
 </script>
 
 <style>
-	/* Keep every cell on the same baseline so rows read as one line. */
-	.results {
-		width: 100%;
-	}
-	.results th,
-	.results td {
-		vertical-align: middle;
-	}
-	/* Narrow leftmost column holding the category badge. */
-	.cat-col {
-		width: 1%;
-		white-space: nowrap;
-		padding-inline-end: 0.5rem;
-	}
-	.filters fieldset {
+	/* ---------- Base (mobile) ---------- */
+	.filters details {
 		border: 1px solid var(--sl-color-gray-5);
 		border-radius: 0.5rem;
-		padding: 0.5rem 1rem 1rem;
 	}
-	.filters legend small {
+	.filters summary {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		min-height: 2.5rem;
+		padding: 0 0.75rem;
+		font-size: var(--sl-text-sm);
+		font-weight: 600;
+		cursor: pointer;
+		list-style: none;
+		user-select: none;
+	}
+	.filters summary::-webkit-details-marker {
+		display: none;
+	}
+	.filters summary::before {
+		content: '\203A';
+		display: inline-block;
+		width: 0.6rem;
+		font-size: 1.1rem;
+		line-height: 1;
+		text-align: center;
+		transition: transform 0.15s;
+	}
+	.filters details[open] summary::before {
+		transform: rotate(90deg);
+	}
+	.filters summary:focus-visible {
+		outline: 2px solid var(--sl-color-accent);
+		border-radius: 0.5rem;
+	}
+	.active {
+		padding: 0.05rem 0.45rem;
+		border-radius: 999px;
+		font-size: var(--sl-text-xs);
+		font-weight: 400;
+		background: var(--sl-color-accent-low);
+		color: var(--sl-color-white);
+	}
+	.count {
+		margin-inline-start: auto;
+		font-size: var(--sl-text-xs);
+		font-weight: 400;
 		color: var(--sl-color-gray-3);
 	}
+
+	.panel {
+		display: grid;
+		gap: 0.6rem;
+		padding: 0 0.75rem 0.75rem;
+	}
+	.panel fieldset {
+		margin: 0;
+		padding: 0;
+		border: 0;
+		min-width: 0;
+	}
+	.panel legend {
+		margin-bottom: 0.35rem;
+		padding: 0;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+	}
+
 	.tags {
 		display: flex;
 		flex-wrap: wrap;
-		align-items: baseline;
-		align-content: center;
-		gap: 0.4rem;
+		gap: 0.3rem;
 	}
 	.tag {
 		position: relative;
 		display: inline-flex;
 		align-items: center;
 		gap: 0.3rem;
-		padding: 0.15rem 0.7rem;
+		min-height: 1.6rem;
+		margin: 0;
+		padding: 0 0.6rem;
 		border: 1px solid var(--sl-color-gray-5);
 		border-radius: 999px;
 		cursor: pointer;
-		font-size: var(--sl-text-sm);
+		font-size: var(--sl-text-xs);
+		line-height: 1;
 		white-space: nowrap;
-		flex-shrink: 0;
 		user-select: none;
+		-webkit-tap-highlight-color: transparent;
 	}
 	/* Hide the checkbox without letting it affect layout. */
 	.tag input {
@@ -172,6 +215,7 @@ const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 		pointer-events: none;
 	}
 	.tag small {
+		font-size: 0.85em;
 		color: var(--sl-color-gray-3);
 	}
 	.tag:has(input:checked) {
@@ -181,52 +225,75 @@ const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 	}
 	.tag:has(input:focus-visible) {
 		outline: 2px solid var(--sl-color-accent);
+		outline-offset: 1px;
 	}
-	.row {
+
+	.controls {
 		display: flex;
-		flex-wrap: wrap;
 		align-items: center;
-		gap: 1rem;
+		gap: 0.5rem;
 	}
-	.row select,
-	.row button {
-		margin-inline-start: 0.5rem;
-		padding: 0.2rem 0.5rem;
+	.min {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		flex: 1;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+		white-space: nowrap;
+	}
+	.min select {
+		flex: 1;
+		min-width: 0;
+	}
+	/* 16px on form fields: avoids the iOS zoom on focus. */
+	.controls select,
+	.controls button {
+		min-height: 2.25rem;
+		margin: 0;
+		padding: 0 0.6rem;
 		border: 1px solid var(--sl-color-gray-5);
-		border-radius: 0.3rem;
+		border-radius: 0.35rem;
 		background: var(--sl-color-black);
 		color: var(--sl-color-white);
 		font: inherit;
+		font-size: 16px;
 	}
-	.row button {
-		margin: 0;
+	.controls button {
 		cursor: pointer;
 	}
-	#count {
-		color: var(--sl-color-gray-3);
+	.controls button:hover {
+		border-color: var(--sl-color-gray-3);
+	}
+
+	.empty {
+		margin-top: 0.75rem;
+		padding: 1rem;
+		text-align: center;
 		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+		border: 1px dashed var(--sl-color-gray-5);
+		border-radius: 0.5rem;
 	}
-	.row-tags {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: baseline;
-		align-content: center;
-		gap: 0.3rem;
-	}
-	.tag-btn {
-		font: inherit;
-		font-size: var(--sl-text-xs);
-		padding: 0.05rem 0.5rem;
-		border: 1px solid var(--sl-color-gray-5);
-		border-radius: 999px;
-		background: none;
-		color: var(--sl-color-gray-2);
-		cursor: pointer;
-		white-space: nowrap;
-		flex-shrink: 0;
-	}
-	.tag-btn:hover {
-		border-color: var(--sl-color-accent);
-		color: var(--sl-color-white);
+
+	/* ---------- Mouse: denser controls ---------- */
+	@media (pointer: fine) {
+		.filters summary {
+			min-height: 2.1rem;
+		}
+		.tag {
+			min-height: 1.45rem;
+		}
+		.min {
+			flex: 0 1 auto;
+		}
+		.min select {
+			flex: 0 1 auto;
+		}
+		.controls select,
+		.controls button {
+			min-height: 1.9rem;
+			font-size: var(--sl-text-sm);
+		}
 	}
 </style>

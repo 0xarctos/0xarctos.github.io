@@ -1,10 +1,9 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
-import { Badge } from '@astrojs/starlight/components';
 import { getCollection } from 'astro:content';
-import Difficulty from '../../components/Difficulty.astro';
-import TagList from '../../components/TagList.astro';
-import { DIFFICULTY_LABELS, categoryVariant, ogImageMeta, AVATAR_OG_IMAGE } from '../../lib/writeups';
+import Crumbs from '../../components/Crumbs.astro';
+import WriteupTable from '../../components/WriteupTable.astro';
+import { ogImageMeta, AVATAR_OG_IMAGE } from '../../lib/writeups';
 
 // One landing page per CTF at /writeups/<ctf-slug>/, listing its write-ups.
 export async function getStaticPaths() {
@@ -31,53 +30,9 @@ const { ctf, entries } = Astro.props;
 ---
 
 <StarlightPage frontmatter={{ title: ctf, tableOfContents: false, head: ogImageMeta(AVATAR_OG_IMAGE) }}>
-	<nav class="crumbs">
-		<a href="/writeups/">All write-ups</a> <span>/</span> <span>{ctf}</span>
-	</nav>
+	<Crumbs items={[{ label: 'All write-ups', href: '/writeups/' }, { label: ctf }]} />
 
-	<p>{entries.length} write-up{entries.length > 1 ? 's' : ''} for this CTF.</p>
+	<p>{entries.length} write-up{entries.length > 1 ? 's' : ''} for this CTF, easiest first.</p>
 
-	<table class="results">
-		<thead>
-			<tr><th class="cat-col" /><th>Challenge</th><th>Difficulty</th><th>Tags</th></tr>
-		</thead>
-		<tbody>
-			{
-				entries.map(({ id, data }) => (
-					<tr>
-						<td class="cat-col"><Badge text={data.category} variant={categoryVariant(data.category)} /></td>
-						<td><a href={`/writeups/${id}/`}>{data.title}</a></td>
-						<td>
-							<Difficulty value={data.difficulty} /> {DIFFICULTY_LABELS[data.difficulty]}
-						</td>
-						<td><TagList tags={data.tags} /></td>
-					</tr>
-				))
-			}
-		</tbody>
-	</table>
+	<WriteupTable entries={entries} />
 </StarlightPage>
-
-<style>
-	.crumbs {
-		font-size: var(--sl-text-sm);
-		color: var(--sl-color-gray-3);
-		margin-bottom: 0.5rem;
-	}
-	.crumbs span {
-		margin-inline: 0.3rem;
-	}
-	.results {
-		width: 100%;
-	}
-	.results th,
-	.results td {
-		vertical-align: middle;
-	}
-	/* Narrow leftmost column holding the category badge. */
-	.cat-col {
-		width: 1%;
-		white-space: nowrap;
-		padding-inline-end: 0.5rem;
-	}
-</style>

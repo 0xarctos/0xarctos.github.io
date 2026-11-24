@@ -1,0 +1,292 @@
+---
+/**
+ * Write-up list shared by the search page and the per-CTF pages.
+ *
+ * Mobile first: each row is a compact 2-line card by default.
+ *   line 1: category, title, difficulty
+ *   line 2: CTF (if shown), tags
+ * It turns into a real table only when its container is wide enough,
+ * so the layout follows the content width (sidebar open or not), not the viewport.
+ * `not-content` opts out of Starlight's prose spacing between siblings.
+ */
+import type { CollectionEntry } from 'astro:content';
+import { Badge } from '@astrojs/starlight/components';
+import Difficulty from './Difficulty.astro';
+import TagList from './TagList.astro';
+import { DIFFICULTY_LABELS, categoryVariant } from '../lib/writeups';
+
+interface Props {
+	entries: CollectionEntry<'writeups'>[];
+	/** Show the CTF column (search page) or not (per-CTF page). */
+	showCtf?: boolean;
+	/** Tags as filter buttons (search page) or as links to the search page. */
+	tagMode?: 'filter' | 'link';
+}
+const { entries, showCtf = false, tagMode = 'link' } = Astro.props;
+---
+
+<div class="wt-wrap not-content">
+	<table class:list={['wt', { 'wt-ctf': showCtf }]}>
+		<thead>
+			<tr>
+				<th class="c-cat"><span class="sr-only">Category</span></th>
+				<th class="c-title">Challenge</th>
+				{showCtf && <th class="c-ctf">CTF</th>}
+				<th class="c-diff">Difficulty</th>
+				<th class="c-tags">Tags</th>
+			</tr>
+		</thead>
+		<tbody>
+			{
+				entries.map(({ id, data }) => (
+					<tr data-tags={data.tags.join(' ')} data-difficulty={data.difficulty}>
+						<td class="c-cat">
+							<Badge text={data.category} variant={categoryVariant(data.category)} />
+						</td>
+						<td class="c-title">
+							<a href={`/writeups/${id}/`}>{data.title}</a>
+						</td>
+						{showCtf && (
+							<td class="c-ctf">
+								<a href={`/writeups/${id.split('/')[0]}/`}>{data.ctf}</a>
+							</td>
+						)}
+						<td class="c-diff">
+							<Difficulty value={data.difficulty} />
+							<span class="diff-label">{DIFFICULTY_LABELS[data.difficulty]}</span>
+						</td>
+						<td class="c-tags">
+							{tagMode === 'filter' ? (
+								<span class="tag-buttons">
+									{data.tags.map((t) => (
+										<button type="button" class="tag-btn" data-tag={t} aria-label={`Filter on ${t}`}>
+											{t}
+										</button>
+									))}
+								</span>
+							) : (
+								<TagList tags={data.tags} />
+							)}
+						</td>
+					</tr>
+				))
+			}
+		</tbody>
+	</table>
+</div>
+
+<style>
+	/* ---------- Base (mobile): one compact card per row ---------- */
+	.wt-wrap {
+		container-type: inline-size;
+		margin-top: 0.75rem;
+	}
+	.wt,
+	.wt tbody {
+		display: block;
+		width: 100%;
+		margin: 0;
+		border: 0;
+	}
+	.wt thead {
+		/* Kept for screen readers, hidden visually. */
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip-path: inset(50%);
+	}
+	.wt tbody tr {
+		position: relative;
+		display: grid;
+		/* col 2 only exists to give the CTF cell its own width on line 2 */
+		grid-template-columns: auto auto 1fr auto;
+		grid-template-areas:
+			'cat  title title diff'
+			'tags tags  tags  tags';
+		align-items: center;
+		gap: 0.3rem 0.5rem;
+		padding: 0.45rem 0.65rem;
+		margin-bottom: 0.4rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.5rem;
+		background: var(--sl-color-gray-6);
+	}
+	.wt-ctf tbody tr {
+		grid-template-areas:
+			'cat  title title diff'
+			'ctf  ctf   tags  tags';
+	}
+	.wt tbody tr[hidden] {
+		display: none;
+	}
+	.wt td {
+		display: block;
+		padding: 0;
+		border: 0;
+		min-width: 0;
+	}
+	.c-cat { grid-area: cat; line-height: 1; }
+	.c-title { grid-area: title; }
+	.c-ctf { grid-area: ctf; }
+	.c-diff { grid-area: diff; }
+	.c-tags { grid-area: tags; }
+
+	.wt td.c-title {
+		font-weight: 600;
+		line-height: 1.3;
+		overflow-wrap: anywhere;
+	}
+	/* The whole card is clickable through the title link. */
+	.c-title a {
+		text-decoration: none;
+	}
+	.c-title a::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: inherit;
+	}
+	/* Other links and buttons stay above the stretched title link. */
+	.c-ctf a,
+	.c-tags :global(a),
+	.tag-btn {
+		position: relative;
+		z-index: 1;
+	}
+	.wt tbody tr:has(.c-title a:hover) {
+		border-color: var(--sl-color-gray-4);
+	}
+	.wt tbody tr:has(.c-title a:focus-visible) {
+		outline: 2px solid var(--sl-color-accent);
+		outline-offset: 2px;
+	}
+	.c-title a:focus-visible {
+		outline: none;
+	}
+
+	.wt td.c-ctf {
+		font-size: var(--sl-text-xs);
+		white-space: nowrap;
+	}
+	.c-ctf a {
+		color: var(--sl-color-gray-3);
+	}
+	.wt td.c-diff {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		font-size: var(--sl-text-xs);
+		color: var(--sl-color-gray-3);
+	}
+	/* Pips are enough on a card (the label is in their tooltip). */
+	.diff-label {
+		display: none;
+	}
+
+	.tag-buttons {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+	.tag-btn {
+		min-height: 1.35rem;
+		padding: 0 0.5rem;
+		font: inherit;
+		font-size: var(--sl-text-xs);
+		line-height: 1;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 999px;
+		background: none;
+		color: var(--sl-color-gray-2);
+		cursor: pointer;
+		white-space: nowrap;
+	}
+	.tag-btn:hover {
+		border-color: var(--sl-color-accent);
+		color: var(--sl-color-white);
+	}
+	.tag-btn:focus-visible {
+		outline: 2px solid var(--sl-color-accent);
+		outline-offset: 1px;
+	}
+
+	/* ---------- Wide: a real table ---------- */
+	@container (min-width: 40rem) {
+		.wt {
+			display: table;
+			border-collapse: collapse;
+		}
+		.wt thead {
+			position: static;
+			width: auto;
+			height: auto;
+			overflow: visible;
+			clip-path: none;
+			display: table-header-group;
+		}
+		.wt tbody {
+			display: table-row-group;
+		}
+		.wt tbody tr {
+			display: table-row;
+			padding: 0;
+			margin: 0;
+			border: 0;
+			border-bottom: 1px solid var(--sl-color-gray-5);
+			border-radius: 0;
+			background: none;
+		}
+		.wt tbody tr[hidden] {
+			display: none;
+		}
+		.wt tbody tr:has(.c-title a:hover) {
+			background: var(--sl-color-gray-6);
+		}
+		.wt tbody tr:has(.c-title a:focus-visible) {
+			outline-offset: -2px;
+		}
+		.wt th,
+		.wt td {
+			display: table-cell;
+			padding: 0.35rem 0.5rem;
+			vertical-align: middle;
+			text-align: start;
+		}
+		.wt th {
+			font-size: var(--sl-text-xs);
+			font-weight: 600;
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			color: var(--sl-color-gray-3);
+			border-bottom: 1px solid var(--sl-color-gray-5);
+		}
+		.wt td.c-ctf {
+			font-size: var(--sl-text-sm);
+		}
+		.wt td.c-diff {
+			display: table-cell;
+			white-space: nowrap;
+		}
+		.wt td.c-diff > * {
+			vertical-align: middle;
+		}
+		.wt .c-cat {
+			width: 1%;
+			white-space: nowrap;
+			padding-inline-end: 0;
+		}
+		/* The per-CTF page has room for the difficulty label. */
+		.wt:not(.wt-ctf) .diff-label {
+			display: inline;
+			margin-inline-start: 0.4rem;
+		}
+	}
+
+	/* Touch screens: slightly bigger tag targets (24px, WCAG 2.2 minimum). */
+	@media (pointer: coarse) {
+		.tag-btn {
+			min-height: 1.5rem;
+		}
+	}
+</style>

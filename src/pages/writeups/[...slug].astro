@@ -2,6 +2,7 @@
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { Code } from '@astrojs/starlight/components';
 import { getCollection, render } from 'astro:content';
+import Crumbs from '../../components/Crumbs.astro';
 import Difficulty from '../../components/Difficulty.astro';
 import TagList from '../../components/TagList.astro';
 import { DIFFICULTY_LABELS, ogImageMeta } from '../../lib/writeups';
@@ -16,6 +17,8 @@ const { data } = entry;
 const { Content } = await render(entry);
 const ctfSlug = entry.id.split('/')[0]; // id is "<ctf-slug>/<challenge-slug>"
 const ogImage = new URL(`/og/${entry.id}.png`, Astro.site).href; // generated banner
+// Longest line of the script: the code font shrinks so this many columns fit the width.
+const codeCols = Math.max(40, ...entry.body!.split('\n').map((l) => l.replace(/\t/g, '    ').length));
 ---
 
 <StarlightPage
@@ -26,65 +29,136 @@ const ogImage = new URL(`/og/${entry.id}.png`, Astro.site).href; // generated ba
 		head: ogImageMeta(ogImage),
 	}}
 >
-	<nav class="crumbs">
-		<a href="/writeups/">All write-ups</a> <span>/</span>
-		<a href={`/writeups/${ctfSlug}/`}>{data.ctf}</a> <span>/</span> <span>{data.title}</span>
-	</nav>
+	<Crumbs
+		items={[
+			{ label: 'All write-ups', href: '/writeups/' },
+			{ label: data.ctf, href: `/writeups/${ctfSlug}/` },
+			{ label: data.title },
+		]}
+	/>
 
-	<table class="writeup-meta">
-		<tbody>
-			<tr><th>CTF</th><td><a href={`/writeups/${ctfSlug}/`}>{data.ctf}</a></td></tr>
-			<tr><th>Category</th><td>{data.category}</td></tr>
-			<tr>
-				<th>Difficulty</th>
-				<td><Difficulty value={data.difficulty} /> {DIFFICULTY_LABELS[data.difficulty]}</td>
-			</tr>
-			<tr><th>Arch</th><td><code>{data.arch}</code></td></tr>
-			<tr><th>Linking</th><td>{data.linking}</td></tr>
-			<tr>
-				<th>Mitigation gaps</th>
-				<td>{data.mitigation_gaps.length ? data.mitigation_gaps.map((g) => <code class="gap">{g}</code>) : 'none'}</td>
-			</tr>
-			<tr>
-				<th>Vulnerabilities</th>
-				<td>{data.vulnerabilities.map((v) => <code class="vuln">{v}</code>)}</td>
-			</tr>
-			<tr><th>Tags</th><td><TagList tags={data.tags} /></td></tr>
-		</tbody>
-	</table>
+	<div class="meta-wrap not-content">
+		<dl class="meta">
+			<div><dt>CTF</dt><dd><a href={`/writeups/${ctfSlug}/`}>{data.ctf}</a></dd></div>
+			<div><dt>Category</dt><dd>{data.category}</dd></div>
+			<div>
+				<dt>Difficulty</dt>
+				<dd class="diff"><Difficulty value={data.difficulty} /> {DIFFICULTY_LABELS[data.difficulty]}</dd>
+			</div>
+			<div><dt>Arch</dt><dd><code>{data.arch}</code></dd></div>
+			<div><dt>Linking</dt><dd>{data.linking}</dd></div>
+			<div class="wide">
+				<dt>Mitigation gaps</dt>
+				<dd class="chips">
+					{data.mitigation_gaps.length ? data.mitigation_gaps.map((g) => <code class="gap">{g}</code>) : 'none'}
+				</dd>
+			</div>
+			<div class="wide">
+				<dt>Vulnerabilities</dt>
+				<dd class="chips">{data.vulnerabilities.map((v) => <code class="vuln">{v}</code>)}</dd>
+			</div>
+			<div class="wide"><dt>Tags</dt><dd><TagList tags={data.tags} /></dd></div>
+		</dl>
+	</div>
 
 	{entry.rendered && <Content />}
 
-	<Code code={entry.body!} lang="py" title={data.script} />
+	<div class="code-fit" style={`--cols: ${codeCols}`}>
+		<Code code={entry.body!} lang="py" title={data.script} wrap />
+	</div>
 </StarlightPage>
 
 <style>
-	.crumbs {
+	/* ---------- Meta: one fact per line, label column on the left ---------- */
+	.meta {
+		display: grid;
+		grid-template-columns: max-content minmax(0, 1fr);
+		gap: 0.3rem 0.9rem;
+		margin: 0;
+		padding: 0.55rem 0.75rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.5rem;
+		background: var(--sl-color-gray-6);
 		font-size: var(--sl-text-sm);
+		line-height: 1.4;
+	}
+	.meta > div {
+		display: grid;
+		grid-template-columns: subgrid;
+		grid-column: 1 / -1;
+		align-items: center;
+		margin: 0;
+	}
+	.meta dt {
+		margin: 0;
+		font-size: var(--sl-text-xs);
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
 		color: var(--sl-color-gray-3);
-		margin-bottom: 1rem;
 	}
-	.crumbs span {
-		margin-inline: 0.3rem;
+	.meta dd {
+		margin: 0;
+		min-width: 0;
+		overflow-wrap: anywhere;
 	}
-	.writeup-meta {
-		width: auto;
-		display: table;
+	.diff {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.4rem;
+	}
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.25rem;
+	}
+	.meta code {
+		margin: 0;
+		padding: 0.05rem 0.35rem;
+		font-size: var(--sl-text-xs);
 	}
 	.gap {
-		margin-inline-end: 0.3rem;
 		color: var(--sl-color-red-high);
 		background: var(--sl-color-red-low);
 	}
 	.vuln {
-		margin-inline-end: 0.3rem;
 		color: var(--sl-color-orange-high);
 		background: var(--sl-color-orange-low);
 	}
-	.writeup-meta th {
-		text-align: start;
-		padding-inline-end: 1.5rem;
-		color: var(--sl-color-gray-3);
-		font-weight: 600;
+
+	/* ---------- Script: shrink the font so the longest line fits the width ----------
+	   0.61em is the advance of the usual monospace fonts. Below 10px the text stops
+	   shrinking and the few remaining long lines wrap (indent preserved) instead of scrolling. */
+	.code-fit {
+		container-type: inline-size;
+	}
+	.code-fit :global(.expressive-code pre) {
+		--ec-codeFontSize: clamp(
+			10px,
+			calc((100cqi - 2 * var(--ec-codePadInl) - 4px) / (var(--cols) * 0.61)),
+			var(--sl-text-code)
+		);
+		--ec-codeLineHt: 1.5;
+	}
+	/* Wrapped continuation lines get a 2ch hanging indent so they read as one line. */
+	.code-fit :global(.expressive-code .ec-line .code) {
+		padding-inline-start: calc(var(--ecIndent, 0ch) + 2ch + var(--ec-codePadInl) - var(--ecGtrBrdWd, 0px));
+		text-indent: calc((var(--ecIndent, 0ch) + 2ch) * -1);
+	}
+
+	/* Phones: the code block bleeds to the screen edges to win the side gutters. */
+	@media (max-width: 50rem) {
+		.code-fit {
+			margin-inline: calc(-1 * var(--sl-content-pad-x));
+		}
+		.code-fit :global(.expressive-code pre) {
+			--ec-codePadInl: 0.6rem;
+		}
+		.code-fit :global(.expressive-code .frame),
+		.code-fit :global(.expressive-code pre) {
+			border-radius: 0;
+			border-inline: 0;
+		}
 	}
 </style>
