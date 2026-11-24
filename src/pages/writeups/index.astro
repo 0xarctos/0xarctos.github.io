@@ -3,7 +3,7 @@ import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { Badge } from '@astrojs/starlight/components';
 import { getCollection } from 'astro:content';
 import Difficulty from '../../components/Difficulty.astro';
-import { DIFFICULTY_LABELS, categoryVariant } from '../../lib/writeups';
+import { DIFFICULTY_LABELS, categoryVariant, ogImageMeta, AVATAR_OG_IMAGE } from '../../lib/writeups';
 
 const writeups = (await getCollection('writeups')).sort(
 	(a, b) => a.data.ctf.localeCompare(b.data.ctf) || a.data.title.localeCompare(b.data.title),
@@ -15,7 +15,7 @@ for (const { data } of writeups) for (const t of data.tags) counts.set(t, (count
 const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
 ---
 
-<StarlightPage frontmatter={{ title: 'Write-ups', tableOfContents: false }}>
+<StarlightPage frontmatter={{ title: 'Write-ups', tableOfContents: false, head: ogImageMeta(AVATAR_OG_IMAGE) }}>
 	<p>CTF write-ups: each one is the solve script, commented. Filter by technique and minimum difficulty.</p>
 
 	<form id="filters" class="filters">

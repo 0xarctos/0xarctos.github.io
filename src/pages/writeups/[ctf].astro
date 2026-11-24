@@ -4,7 +4,7 @@ import { Badge } from '@astrojs/starlight/components';
 import { getCollection } from 'astro:content';
 import Difficulty from '../../components/Difficulty.astro';
 import TagList from '../../components/TagList.astro';
-import { DIFFICULTY_LABELS, categoryVariant } from '../../lib/writeups';
+import { DIFFICULTY_LABELS, categoryVariant, ogImageMeta, AVATAR_OG_IMAGE } from '../../lib/writeups';
 
 // One landing page per CTF at /writeups/<ctf-slug>/, listing its write-ups.
 export async function getStaticPaths() {
@@ -30,7 +30,7 @@ export async function getStaticPaths() {
 const { ctf, entries } = Astro.props;
 ---
 
-<StarlightPage frontmatter={{ title: ctf, tableOfContents: false }}>
+<StarlightPage frontmatter={{ title: ctf, tableOfContents: false, head: ogImageMeta(AVATAR_OG_IMAGE) }}>
 	<nav class="crumbs">
 		<a href="/writeups/">All write-ups</a> <span>/</span> <span>{ctf}</span>
 	</nav>

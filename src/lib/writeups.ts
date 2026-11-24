@@ -117,3 +117,13 @@ export const CATEGORY_BADGE_VARIANTS: Record<string, BadgeVariant> = {
 };
 export const categoryVariant = (category: string): BadgeVariant =>
 	CATEGORY_BADGE_VARIANTS[category] ?? 'default';
+
+/** Absolute URL of the avatar, the default social-embed image. */
+export const AVATAR_OG_IMAGE = 'https://0xarctos.github.io/favicon.jpg';
+
+/** Head tags setting og:image + twitter:image to `url` (for Starlight frontmatter.head). */
+export const ogImageMeta = (url: string) =>
+	[
+		{ tag: 'meta', attrs: { property: 'og:image', content: url } },
+		{ tag: 'meta', attrs: { name: 'twitter:image', content: url } },
+	] as const;

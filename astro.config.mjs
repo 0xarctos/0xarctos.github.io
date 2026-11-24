@@ -24,8 +24,8 @@ export default defineConfig({
 			lastUpdated: true,
 			sidebar,
 			routeMiddleware: './src/routeData.ts',
-			// GoatCounter analytics (ignores localhost, so dev visits are not counted)
 			head: [
+				// GoatCounter analytics (ignores localhost, so dev visits are not counted)
 				{
 					tag: 'script',
 					attrs: {

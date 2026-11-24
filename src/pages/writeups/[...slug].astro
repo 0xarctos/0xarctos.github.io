@@ -4,7 +4,7 @@ import { Code } from '@astrojs/starlight/components';
 import { getCollection, render } from 'astro:content';
 import Difficulty from '../../components/Difficulty.astro';
 import TagList from '../../components/TagList.astro';
-import { DIFFICULTY_LABELS } from '../../lib/writeups';
+import { DIFFICULTY_LABELS, ogImageMeta } from '../../lib/writeups';
 
 export async function getStaticPaths() {
 	const writeups = await getCollection('writeups');
@@ -15,6 +15,7 @@ const { entry } = Astro.props;
 const { data } = entry;
 const { Content } = await render(entry);
 const ctfSlug = entry.id.split('/')[0]; // id is "<ctf-slug>/<challenge-slug>"
+const ogImage = new URL(`/og/${entry.id}.png`, Astro.site).href; // generated banner
 ---
 
 <StarlightPage
@@ -22,6 +23,7 @@ const ctfSlug = entry.id.split('/')[0]; // id is "<ctf-slug>/<challenge-slug>"
 		title: data.title,
 		description: `${data.ctf} - ${data.category} - ${data.tags.join(', ')}`,
 		tableOfContents: false,
+		head: ogImageMeta(ogImage),
 	}}
 >
 	<nav class="crumbs">
