@@ -1,0 +1,19 @@
+# Allowed values for `vulnerabilities`: bugs found in the binary and exploited.
+# A script using a value missing from this list fails the build.
+
+- stack-overflow
+- heap-overflow
+- bss-overflow
+- format-string
+- use-after-free
+- double-free
+- integer-overflow
+- integer-underflow
+- off-by-one
+- off-by-null
+- out-of-bounds-read
+- out-of-bounds-write
+- uninitialized-memory
+- type-confusion
+- race-condition
+- command-injection

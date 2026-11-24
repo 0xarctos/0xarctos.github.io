@@ -1,0 +1,224 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { getCollection } from 'astro:content';
+import Difficulty from '../../components/Difficulty.astro';
+import { DIFFICULTY_LABELS } from '../../lib/writeups';
+
+const writeups = (await getCollection('writeups')).sort(
+	(a, b) => a.data.ctf.localeCompare(b.data.ctf) || a.data.title.localeCompare(b.data.title),
+);
+
+// Every tag with its number of write-ups, most used first.
+const counts = new Map<string, number>();
+for (const { data } of writeups) for (const t of data.tags) counts.set(t, (counts.get(t) ?? 0) + 1);
+const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+---
+
+<StarlightPage frontmatter={{ title: 'Write-ups', tableOfContents: false }}>
+	<p>CTF write-ups: each one is the solve script, commented. Filter by technique and minimum difficulty.</p>
+
+	<form id="filters" class="filters">
+		<fieldset>
+			<legend>Tags <small>(write-ups matching all selected tags)</small></legend>
+			<div class="tags">
+				{
+					tags.map(([tag, n]) => (
+						<label class="tag">
+							<input type="checkbox" name="tags" value={tag} />
+							{tag} <small>{n}</small>
+						</label>
+					))
+				}
+			</div>
+		</fieldset>
+		<div class="row">
+			<label>
+				Min difficulty
+				<select name="min">
+					{[1, 2, 3, 4, 5].map((d) => <option value={d}>{d} - {DIFFICULTY_LABELS[d]}</option>)}
+				</select>
+			</label>
+			<button type="reset">Clear</button>
+			<span id="count" aria-live="polite"></span>
+		</div>
+	</form>
+
+	<table class="results">
+		<thead>
+			<tr><th>Challenge</th><th>CTF</th><th>Difficulty</th><th>Tags</th></tr>
+		</thead>
+		<tbody>
+			{
+				writeups.map(({ id, data }) => (
+					<tr data-tags={data.tags.join(' ')} data-difficulty={data.difficulty}>
+						<td><a href={`/writeups/${id}/`}>{data.title}</a></td>
+						<td>{data.ctf}</td>
+						<td><Difficulty value={data.difficulty} /></td>
+						<td>
+							<div class="row-tags">
+								{data.tags.map((t) => (
+									<button type="button" class="tag-btn" data-tag={t}>{t}</button>
+								))}
+							</div>
+						</td>
+					</tr>
+				))
+			}
+		</tbody>
+	</table>
+	<p id="empty" hidden>No write-up matches these filters.</p>
+</StarlightPage>
+
+<script>
+	const form = document.getElementById('filters') as HTMLFormElement;
+	const rows = [...document.querySelectorAll<HTMLTableRowElement>('.results tbody tr')];
+	const boxes = [...form.querySelectorAll<HTMLInputElement>('input[name="tags"]')];
+	const min = form.querySelector<HTMLSelectElement>('select[name="min"]')!;
+
+	function apply() {
+		const selected = boxes.filter((b) => b.checked).map((b) => b.value);
+		const minDiff = Number(min.value);
+		let shown = 0;
+		for (const row of rows) {
+			const rowTags = row.dataset.tags!.split(' ');
+			const ok = Number(row.dataset.difficulty) >= minDiff && selected.every((t) => rowTags.includes(t));
+			row.hidden = !ok;
+			if (ok) shown++;
+		}
+		document.getElementById('count')!.textContent = `${shown} / ${rows.length}`;
+		document.getElementById('empty')!.hidden = shown > 0;
+
+		// Keep filters in the URL so a filtered view can be shared or bookmarked.
+		const params = new URLSearchParams();
+		if (selected.length) params.set('tags', selected.join(','));
+		if (minDiff > 1) params.set('min', String(minDiff));
+		const query = params.toString();
+		history.replaceState(null, '', query ? `?${query}` : location.pathname);
+	}
+
+	// Initial state from the URL (?tags=rop,ret2win&min=2).
+	const params = new URLSearchParams(location.search);
+	const fromUrl = (params.get('tags') ?? '').split(',').filter(Boolean);
+	for (const b of boxes) b.checked = fromUrl.includes(b.value);
+	min.value = params.get('min') ?? '1';
+
+	form.addEventListener('change', apply);
+	form.addEventListener('reset', () => setTimeout(apply));
+	// Clicking a tag in the table adds it to the filter.
+	document.querySelector('.results')!.addEventListener('click', (e) => {
+		const tag = (e.target as HTMLElement).closest<HTMLElement>('.tag-btn')?.dataset.tag;
+		const box = boxes.find((b) => b.value === tag);
+		if (box) {
+			box.checked = true;
+			apply();
+		}
+	});
+	apply();
+</script>
+
+<style>
+	/* Keep every cell on the same baseline so rows read as one line. */
+	.results {
+		width: 100%;
+	}
+	.results th,
+	.results td {
+		vertical-align: middle;
+	}
+	.filters fieldset {
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.5rem;
+		padding: 0.5rem 1rem 1rem;
+	}
+	.filters legend small {
+		color: var(--sl-color-gray-3);
+	}
+	.tags {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		align-content: center;
+		gap: 0.4rem;
+	}
+	.tag {
+		position: relative;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.3rem;
+		padding: 0.15rem 0.7rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 999px;
+		cursor: pointer;
+		font-size: var(--sl-text-sm);
+		white-space: nowrap;
+		flex-shrink: 0;
+		user-select: none;
+	}
+	/* Hide the checkbox without letting it affect layout. */
+	.tag input {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: 0;
+		opacity: 0;
+		pointer-events: none;
+	}
+	.tag small {
+		color: var(--sl-color-gray-3);
+	}
+	.tag:has(input:checked) {
+		background: var(--sl-color-accent-low);
+		border-color: var(--sl-color-accent);
+		color: var(--sl-color-white);
+	}
+	.tag:has(input:focus-visible) {
+		outline: 2px solid var(--sl-color-accent);
+	}
+	.row {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 1rem;
+	}
+	.row select,
+	.row button {
+		margin-inline-start: 0.5rem;
+		padding: 0.2rem 0.5rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.3rem;
+		background: var(--sl-color-black);
+		color: var(--sl-color-white);
+		font: inherit;
+	}
+	.row button {
+		margin: 0;
+		cursor: pointer;
+	}
+	#count {
+		color: var(--sl-color-gray-3);
+		font-size: var(--sl-text-sm);
+	}
+	.row-tags {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		align-content: center;
+		gap: 0.3rem;
+	}
+	.tag-btn {
+		font: inherit;
+		font-size: var(--sl-text-xs);
+		padding: 0.05rem 0.5rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 999px;
+		background: none;
+		color: var(--sl-color-gray-2);
+		cursor: pointer;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+	.tag-btn:hover {
+		border-color: var(--sl-color-accent);
+		color: var(--sl-color-white);
+	}
+</style>

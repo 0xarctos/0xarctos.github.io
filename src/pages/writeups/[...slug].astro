@@ -1,0 +1,74 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { Code } from '@astrojs/starlight/components';
+import { getCollection, render } from 'astro:content';
+import Difficulty from '../../components/Difficulty.astro';
+import TagList from '../../components/TagList.astro';
+import { DIFFICULTY_LABELS } from '../../lib/writeups';
+
+export async function getStaticPaths() {
+	const writeups = await getCollection('writeups');
+	return writeups.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { data } = entry;
+const { Content } = await render(entry);
+---
+
+<StarlightPage
+	frontmatter={{
+		title: data.title,
+		description: `${data.ctf} - ${data.category} - ${data.tags.join(', ')}`,
+		tableOfContents: false,
+	}}
+>
+	<table class="writeup-meta">
+		<tbody>
+			<tr><th>CTF</th><td>{data.ctf}</td></tr>
+			<tr><th>Category</th><td>{data.category}</td></tr>
+			<tr>
+				<th>Difficulty</th>
+				<td><Difficulty value={data.difficulty} /> {DIFFICULTY_LABELS[data.difficulty]}</td>
+			</tr>
+			<tr><th>Arch</th><td><code>{data.arch}</code></td></tr>
+			<tr><th>Linking</th><td>{data.linking}</td></tr>
+			<tr>
+				<th>Mitigation gaps</th>
+				<td>{data.mitigation_gaps.length ? data.mitigation_gaps.map((g) => <code class="gap">{g}</code>) : 'none'}</td>
+			</tr>
+			<tr>
+				<th>Vulnerabilities</th>
+				<td>{data.vulnerabilities.map((v) => <code class="vuln">{v}</code>)}</td>
+			</tr>
+			<tr><th>Tags</th><td><TagList tags={data.tags} /></td></tr>
+		</tbody>
+	</table>
+
+	{entry.rendered && <Content />}
+
+	<Code code={entry.body!} lang="py" title={data.script} />
+</StarlightPage>
+
+<style>
+	.writeup-meta {
+		width: auto;
+		display: table;
+	}
+	.gap {
+		margin-inline-end: 0.3rem;
+		color: var(--sl-color-red-high);
+		background: var(--sl-color-red-low);
+	}
+	.vuln {
+		margin-inline-end: 0.3rem;
+		color: var(--sl-color-orange-high);
+		background: var(--sl-color-orange-low);
+	}
+	.writeup-meta th {
+		text-align: start;
+		padding-inline-end: 1.5rem;
+		color: var(--sl-color-gray-3);
+		font-weight: 600;
+	}
+</style>

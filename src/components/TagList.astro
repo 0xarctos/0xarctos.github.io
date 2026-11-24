@@ -1,0 +1,35 @@
+---
+/** Tags as links to the search page, pre-filtered on that tag. */
+interface Props {
+	tags: string[];
+}
+const { tags } = Astro.props;
+---
+
+<span class="tag-list">
+	{tags.map((tag) => <a class="tag" href={`/writeups/?tags=${encodeURIComponent(tag)}`}>{tag}</a>)}
+</span>
+
+<style>
+	.tag-list {
+		display: inline-flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		align-content: center;
+		gap: 0.3rem;
+	}
+	.tag {
+		font-size: var(--sl-text-xs);
+		padding: 0.05rem 0.5rem;
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 999px;
+		color: var(--sl-color-gray-2);
+		text-decoration: none;
+		white-space: nowrap;
+		flex-shrink: 0;
+	}
+	.tag:hover {
+		border-color: var(--sl-color-accent);
+		color: var(--sl-color-white);
+	}
+</style>

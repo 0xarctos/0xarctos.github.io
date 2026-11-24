@@ -1,0 +1,31 @@
+# Allowed tags for write-ups. A script using a tag missing from this list fails the build.
+# Add new tags here first.
+
+# Techniques
+- ret2win
+- rop
+- ret2libc
+- ret2plt
+- ret2dlresolve
+- srop
+- shellcode
+- got-overwrite
+- stack-pivot
+- one-gadget
+- tcache-poisoning
+- fastbin-dup
+- house-of-force
+- fsop
+- arbitrary-read
+- arbitrary-write
+- orw               # open/read/write the flag file to leak it
+- syscall-rop       # issue raw syscalls directly from a ROP chain
+- seccomp-bypass    # defeat a seccomp filter (e.g. openat2 when open is blocked)
+
+# Leaks (mitigation gaps go in mitigations.yml)
+- pie-leak
+- canary-leak
+- libc-leak
+
+# Context
+- seccomp

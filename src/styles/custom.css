@@ -3,22 +3,23 @@
 .hero img {
 	border-radius: 50%;
 }
-/* Home page cards: one color per position */
-.card:nth-child(1) { /* Binary Exploitation */
-	--sl-card-border: var(--sl-color-red);
-	--sl-card-bg: var(--sl-color-red-low);
+
+/* Write-ups sidebar: show the category badge before the challenge name.
+   The badge hugs its text (no fixed width). */
+nav a:has(> .sl-badge) {
+	display: flex;
+	align-items: baseline;
+	gap: 0.5rem;
 }
-.card:nth-child(2) { /* Reverse Engineering */
-	--sl-card-border: var(--sl-color-blue);
-	--sl-card-bg: var(--sl-color-blue-low);
+nav a > .sl-badge {
+	order: -1;
+	flex-shrink: 0;
 }
-.card:nth-child(3) { /* Tools */
-	--sl-card-border: var(--sl-color-green);
-	--sl-card-bg: var(--sl-color-green-low);
-}
-/* Card grids: 3 cards per row on wide screens (Starlight default is 2) */
-@media (min-width: 50rem) {
-	.card-grid {
-		grid-template-columns: repeat(3, 1fr);
-	}
+
+/* Discreet highlight for the current write-up instead of the bright accent fill. */
+nav a:has(> .sl-badge)[aria-current='page'],
+nav a:has(> .sl-badge)[aria-current='page']:hover,
+nav a:has(> .sl-badge)[aria-current='page']:focus {
+	color: var(--sl-color-white);
+	background-color: var(--sl-color-gray-4);
 }

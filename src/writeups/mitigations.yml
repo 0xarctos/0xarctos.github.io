@@ -1,0 +1,14 @@
+# Allowed values for `mitigation_gaps`: missing or partial mitigations found during recon.
+# A script using a value missing from this list fails the build.
+
+- no-pie            # fixed base address
+- no-canary         # no stack protector
+- no-nx             # executable stack / data
+- no-relro          # GOT writable, .fini_array writable
+- partial-relro     # GOT writable
+- no-fortify        # no _FORTIFY_SOURCE checks
+- rwx-segments      # RWX mapping present
+- no-aslr           # ASLR disabled on the target
+- no-shstk          # no CET shadow stack
+- no-ibt            # no CET indirect branch tracking
+- not-stripped      # symbols present

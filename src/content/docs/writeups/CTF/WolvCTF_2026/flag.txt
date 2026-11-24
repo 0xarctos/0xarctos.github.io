@@ -1,1 +1,0 @@
-../../../../../../public/files/WolvCTF_2026/flag.txt
