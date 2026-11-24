@@ -1,8 +1,9 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { Badge } from '@astrojs/starlight/components';
 import { getCollection } from 'astro:content';
 import Difficulty from '../../components/Difficulty.astro';
-import { DIFFICULTY_LABELS } from '../../lib/writeups';
+import { DIFFICULTY_LABELS, categoryVariant } from '../../lib/writeups';
 
 const writeups = (await getCollection('writeups')).sort(
 	(a, b) => a.data.ctf.localeCompare(b.data.ctf) || a.data.title.localeCompare(b.data.title),
@@ -45,14 +46,15 @@ const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 
 	<table class="results">
 		<thead>
-			<tr><th>Challenge</th><th>CTF</th><th>Difficulty</th><th>Tags</th></tr>
+			<tr><th class="cat-col" /><th>Challenge</th><th>CTF</th><th>Difficulty</th><th>Tags</th></tr>
 		</thead>
 		<tbody>
 			{
 				writeups.map(({ id, data }) => (
 					<tr data-tags={data.tags.join(' ')} data-difficulty={data.difficulty}>
-						<td><a href={`/writeups/${id}/`}>{data.title}</a></td>
-						<td>{data.ctf}</td>
+						<td class="cat-col"><Badge text={data.category} variant={categoryVariant(data.category)} /></td>
+							<td><a href={`/writeups/${id}/`}>{data.title}</a></td>
+						<td><a href={`/writeups/${id.split('/')[0]}/`}>{data.ctf}</a></td>
 						<td><Difficulty value={data.difficulty} /></td>
 						<td>
 							<div class="row-tags">
@@ -124,6 +126,12 @@ const tags = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
 	.results th,
 	.results td {
 		vertical-align: middle;
+	}
+	/* Narrow leftmost column holding the category badge. */
+	.cat-col {
+		width: 1%;
+		white-space: nowrap;
+		padding-inline-end: 0.5rem;
 	}
 	.filters fieldset {
 		border: 1px solid var(--sl-color-gray-5);

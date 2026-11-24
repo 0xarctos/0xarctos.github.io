@@ -14,6 +14,7 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { data } = entry;
 const { Content } = await render(entry);
+const ctfSlug = entry.id.split('/')[0]; // id is "<ctf-slug>/<challenge-slug>"
 ---
 
 <StarlightPage
@@ -23,9 +24,14 @@ const { Content } = await render(entry);
 		tableOfContents: false,
 	}}
 >
+	<nav class="crumbs">
+		<a href="/writeups/">All write-ups</a> <span>/</span>
+		<a href={`/writeups/${ctfSlug}/`}>{data.ctf}</a> <span>/</span> <span>{data.title}</span>
+	</nav>
+
 	<table class="writeup-meta">
 		<tbody>
-			<tr><th>CTF</th><td>{data.ctf}</td></tr>
+			<tr><th>CTF</th><td><a href={`/writeups/${ctfSlug}/`}>{data.ctf}</a></td></tr>
 			<tr><th>Category</th><td>{data.category}</td></tr>
 			<tr>
 				<th>Difficulty</th>
@@ -51,6 +57,14 @@ const { Content } = await render(entry);
 </StarlightPage>
 
 <style>
+	.crumbs {
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+		margin-bottom: 1rem;
+	}
+	.crumbs span {
+		margin-inline: 0.3rem;
+	}
 	.writeup-meta {
 		width: auto;
 		display: table;

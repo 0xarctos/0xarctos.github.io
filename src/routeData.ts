@@ -1,16 +1,8 @@
 import { defineRouteMiddleware } from '@astrojs/starlight/route-data';
 import { getCollection } from 'astro:content';
+import { categoryVariant } from './lib/writeups';
 
 type SidebarEntry = App.Locals['starlightRoute']['sidebar'][number];
-
-const BADGE_VARIANTS: Record<string, 'danger' | 'note' | 'tip' | 'caution' | 'success' | 'default'> = {
-	pwn: 'danger',
-	rev: 'note',
-	reverse: 'note',
-	web: 'tip',
-	crypto: 'caution',
-	forensics: 'success',
-};
 
 // Fills the "Write-ups" sidebar group with one sub-group per CTF, built from the scripts.
 export const onRequest = defineRouteMiddleware(async (context) => {
@@ -28,7 +20,7 @@ export const onRequest = defineRouteMiddleware(async (context) => {
 			label: data.title,
 			href,
 			isCurrent: href === current,
-			badge: { text: data.category, variant: BADGE_VARIANTS[data.category] ?? 'default' },
+			badge: { text: data.category, variant: categoryVariant(data.category) },
 			attrs: {},
 		});
 		byCtf.set(data.ctf, links);

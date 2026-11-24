@@ -104,3 +104,16 @@ export const slugify = (path: string) =>
 		.join('/');
 
 export const DIFFICULTY_LABELS = ['', 'Very easy', 'Easy', 'Medium', 'Hard', 'Insane'];
+
+/** Starlight badge variant per challenge category (sidebar and tables share this). */
+export type BadgeVariant = 'danger' | 'note' | 'tip' | 'caution' | 'success' | 'default';
+export const CATEGORY_BADGE_VARIANTS: Record<string, BadgeVariant> = {
+	pwn: 'danger',
+	rev: 'note',
+	reverse: 'note',
+	web: 'tip',
+	crypto: 'caution',
+	forensics: 'success',
+};
+export const categoryVariant = (category: string): BadgeVariant =>
+	CATEGORY_BADGE_VARIANTS[category] ?? 'default';
